@@ -14,17 +14,16 @@
 7 #max y resolution
 0.3141592653589793 #max rotation
 21 #max rotation resolution
+0.157 #max bend
+20 #max bend resolution
 0 #minimum height increase
 3 #max height increase
 4 #height increase resolution
 31 #max length of bacteria before splitting
 13 #minimum length of any bacteria
-0.25 #beginning of split ratio
-0.75 #end of split ratio
-20 #split ratio resolution
 
-pos:x   pos:y   length  rotation
-160.0   105     20      1.6045768929625288
-156     125     17      1.997275974661253
-165.    130.00  14      1.997275974661253
-170     113     15      1.6045768929625288
+pos:x   pos:y   length  rotation		bend
+160.0   105     20      1.605           	3.14
+156     125     17      2			3.14
+165.    130.00  14      2			3.14
+170     113     15      1.605			3.14
