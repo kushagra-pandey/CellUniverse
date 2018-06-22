@@ -1,6 +1,7 @@
 from math import sqrt
 
 import numpy as np
+import sys
 
 from Bacterium import normalize
 from constants import Config
@@ -27,7 +28,7 @@ def circles_collision(B, i, j, circle_i, circle_j):
         # change in momentum
         dp = F*dt
         B[i].v += dp/B[i].m
-
+        
         # moment of intertia
         inertia = B[i].m * B[i].length**2 / 12
 
@@ -61,6 +62,7 @@ def circle_line(B, i, j, circle_i, line_j):
     y = circle_i[1]
     m = line_j.m
     b = line_j.b
+
 
     # distance between the circle's center and nearest point on the line
     z = 1.0/(m*m + 1)
@@ -137,27 +139,55 @@ def run(B, M):
 
                 if not M[i][j]:
                     continue
-
-                # circle-circle collisions
-                collided |= circles_collision(B, i, j,
-                                              B[i].head_pos, B[j].head_pos)
-                collided |= circles_collision(B, i, j,
-                                              B[i].head_pos, B[j].tail_pos)
-                collided |= circles_collision(B, i, j,
-                                              B[i].tail_pos, B[j].head_pos)
-                collided |= circles_collision(B, i, j,
-                                              B[i].tail_pos, B[j].tail_pos)
-
-                # circle-line collisions
-                collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_1)
-                collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_2)
-                collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_1)
-                collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_2)
-                collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_1)
-                collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_2)
-                collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_1)
-                collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_2)
-
+                
+                try:
+                    # circle-circle collisions
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].head_pos, B[j].head_pos)
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].head_pos, B[j].tail_pos)
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].tail_pos, B[j].head_pos)
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].tail_pos, B[j].tail_pos)
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].tail_pos, B[j].pos)
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].pos, B[j].tail_pos)
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].head_pos, B[j].pos)
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].pos, B[j].head_pos)
+                    collided |= circles_collision(B, i, j,
+                                                  B[i].pos, B[j].pos)
+                    
+                    # circle-line collisions
+                    collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_1)
+                    collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_2)
+                    collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_3)
+                    collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_4)
+                    collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_1)
+                    collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_2)
+                    collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_3)
+                    collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_4)
+                    collided |= circle_line(B, i, j, B[i].pos, B[j].line_1)
+                    collided |= circle_line(B, i, j, B[i].pos, B[j].line_2)
+                    collided |= circle_line(B, i, j, B[i].pos, B[j].line_3)
+                    collided |= circle_line(B, i, j, B[i].pos, B[j].line_4)
+                    collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_1)
+                    collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_2)
+                    collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_3)
+                    collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_4)
+                    collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_1)
+                    collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_2)
+                    collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_3)
+                    collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_4)
+                    collided |= circle_line(B, j, i, B[j].pos, B[i].line_1)
+                    collided |= circle_line(B, j, i, B[j].pos, B[i].line_2)
+                    collided |= circle_line(B, j, i, B[j].pos, B[i].line_3)
+                    collided |= circle_line(B, j, i, B[j].pos, B[i].line_4)
+                except:
+                    continue
         if not collided:
             break
 
@@ -181,28 +211,56 @@ def run2(B, i, M):
 
             if not M[i][j]:
                 continue
+            try:
+                # circle-circle collisions
+                collided |= circles_collision(B, i, j,
+                                              B[i].head_pos, B[j].head_pos)
+                collided |= circles_collision(B, i, j,
+                                              B[i].head_pos, B[j].tail_pos)
+                collided |= circles_collision(B, i, j,
+                                              B[i].tail_pos, B[j].head_pos)
+                collided |= circles_collision(B, i, j,
+                                              B[i].tail_pos, B[j].tail_pos)
+                collided |= circles_collision(B, i, j,
+                                              B[i].tail_pos, B[j].pos)
+                collided |= circles_collision(B, i, j,
+                                              B[i].pos, B[j].tail_pos)
+                collided |= circles_collision(B, i, j,
+                                              B[i].head_pos, B[j].pos)
+                collided |= circles_collision(B, i, j,
+                                              B[i].pos, B[j].head_pos)
+                collided |= circles_collision(B, i, j,
+                                              B[i].pos, B[j].pos)
 
-            # circle-circle collisions
-            collided |= circles_collision(B, i, j,
-                                          B[i].head_pos, B[j].head_pos)
-            collided |= circles_collision(B, i, j,
-                                          B[i].head_pos, B[j].tail_pos)
-            collided |= circles_collision(B, i, j,
-                                          B[i].tail_pos, B[j].head_pos)
-            collided |= circles_collision(B, i, j,
-                                          B[i].tail_pos, B[j].tail_pos)
-
-            # circle-line collisions
-            collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_1)
-            collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_2)
-            collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_1)
-            collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_2)
-            collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_1)
-            collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_2)
-            collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_1)
-            collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_2)
-
-            B[j].collided = False
+                # circle-line collisions
+                collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_1)
+                collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_2)
+                collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_3)
+                collided |= circle_line(B, i, j, B[i].head_pos, B[j].line_4)
+                collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_1)
+                collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_2)
+                collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_3)
+                collided |= circle_line(B, i, j, B[i].tail_pos, B[j].line_4)
+                collided |= circle_line(B, i, j, B[i].pos, B[j].line_1)
+                collided |= circle_line(B, i, j, B[i].pos, B[j].line_2)
+                collided |= circle_line(B, i, j, B[i].pos, B[j].line_3)
+                collided |= circle_line(B, i, j, B[i].pos, B[j].line_4)
+                collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_1)
+                collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_2)
+                collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_3)
+                collided |= circle_line(B, j, i, B[j].head_pos, B[i].line_4)
+                collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_1)
+                collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_2)
+                collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_3)
+                collided |= circle_line(B, j, i, B[j].tail_pos, B[i].line_4)
+                collided |= circle_line(B, j, i, B[j].pos, B[i].line_1)
+                collided |= circle_line(B, j, i, B[j].pos, B[i].line_2)
+                collided |= circle_line(B, j, i, B[j].pos, B[i].line_3)
+                collided |= circle_line(B, j, i, B[j].pos, B[i].line_4)
+                
+                B[j].collided = False
+            except:
+                continue
 
         if not collided:
             break
