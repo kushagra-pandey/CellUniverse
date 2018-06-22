@@ -112,4 +112,4 @@ Examples
 
 ``` sourceCode
 python celluniverse.py --frames frames/ --processes 2 --output Output/ example1.init.txt
-```
+``` CellUniverseBent
