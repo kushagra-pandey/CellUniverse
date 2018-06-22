@@ -8,7 +8,7 @@ import signal
 import sys
 import time
 from collections import defaultdict
-from math import cos, pi, sin, atan, atan2
+from math import cos, pi, sin
 
 import cv2
 import numpy as np
@@ -149,56 +149,52 @@ def find_k_best_moves(U, frame_array, index, i, count, M, start):
                                 Config.MAX_LENGTH_INCREASE,
                                 Config.LENGTH_INCREASE_RESOLUTION)
 
-    #split_ratio_space = np.linspace(Config.SPLIT_RATIO_BEGINNING,
-     #                               Config.SPLIT_RATIO_END,
-      #                              Config.SPLIT_RATIO_RESOLUTION)
-    dbend_space = np.linspace(0, Config.MAX_BEND, Config.MAX_BEND_RESOLUTION)
+    split_ratio_space = np.linspace(Config.SPLIT_RATIO_BEGINNING,
+                                    Config.SPLIT_RATIO_END,
+                                    Config.SPLIT_RATIO_RESOLUTION)
+
     for dx in dx_space:
         for dy in dy_space:
             for dtheta in dtheta_space:
-                for dbend in dbend_space:    
-                    for dlength in dlength_space:
+                for dlength in dlength_space:
 
-                        bacterium_copy = deepcopy(bacterium)
+                    bacterium_copy = deepcopy(bacterium)
 
-                        bacterium_copy.pos += np.array([dx, dy, 0])
-                        bacterium_copy.theta += dtheta
-                        bacterium_copy.length += dlength
-                        bacterium_copy.bend += dbend
+                    bacterium_copy.pos += np.array([dx, dy, 0])
+                    bacterium_copy.theta += dtheta
+                    bacterium_copy.length += dlength
 
-                        bacterium_copy.update()
-                        temp = U_copy[i]
-                        U_copy[i] = bacterium_copy
-                        collisionEventsHandler.run2(U_copy, i, M)
-                        U_copy[i] = temp
+                    bacterium_copy.update()
+                    temp = U_copy[i]
+                    U_copy[i] = bacterium_copy
+                    collisionEventsHandler.run2(U_copy, i, M)
+                    U_copy[i] = temp
 
-                        c = cost(frame_array, [bacterium_copy])
-                        bisect.insort_left(k_best_moves,
-                                           (c, dx, dy, dtheta, dbend, dlength))
+                    c = cost(frame_array, [bacterium_copy])
+                    bisect.insort_left(k_best_moves,
+                                       (c, dx, dy, dtheta, dlength))
 
     # splitting
     to_insert = []
-    for c, dx, dy, dtheta, dbend, dlength in k_best_moves:
+    for c, dx, dy, dtheta, dlength in k_best_moves:
         bacterium_copy = deepcopy(bacterium)
 
         bacterium_copy.pos += np.array([dx, dy, 0])
         bacterium_copy.theta += dtheta
         bacterium_copy.length += dlength
-        bacterium_copy.bend+=dbend
         bacterium_copy.update()
 
         if bacterium_copy.length > Config.MAX_LENGTH_BEFORE_SPLIT:
-            #for split_ratio in split_ratio_space:
-            bacterium_copy_2 = deepcopy(bacterium_copy)
-            flag = True
-            new_bacterium = split(bacterium_copy_2)#, split_ratio)
-            if (bacterium_copy_2.length < Config.MIN_LENGTH or
-                    new_bacterium.length < Config.MIN_LENGTH):
-                #continue
-                flag = False
-            if flag == True:
+            for split_ratio in split_ratio_space:
+                bacterium_copy_2 = deepcopy(bacterium_copy)
+
+                new_bacterium = split(bacterium_copy_2, split_ratio)
+                if (bacterium_copy_2.length < Config.MIN_LENGTH or
+                        new_bacterium.length < Config.MIN_LENGTH):
+                    continue
+
                 c = cost(frame_array, [bacterium_copy_2, new_bacterium]) + 5
-                to_insert.append((c, dx, dy, dtheta, dbend, dlength, flag))#'''split_ratio'''flag))
+                to_insert.append((c, dx, dy, dtheta, dlength, split_ratio))
 
     for e in to_insert:
         bisect.insort_left(k_best_moves, e)
@@ -238,10 +234,9 @@ def generate_universes(U, frame_array, index, count, best_moves, start):
             bacterium.pos += np.array([move[0], move[1], 0])
             bacterium.theta += move[2]
             bacterium.length += move[3]
-            bacterium.bend += move[4]
             bacterium.update()
-            if len(move) == 6:
-                Us[i].append(split(bacterium))
+            if len(move) == 5:
+                Us[i].append(split(bacterium, move[4]))
                 correspondence.append(j)
 
         # expand the collision matrix if bacteria have split
@@ -333,18 +328,6 @@ def improve(Si, frame_array, index, count, start):
                     U = U_copy
                     Si = (s, U, index, index2)
                     improved = True
-            # bending
-            for dbend in [-pi/100, pi/100]:
-                U_copy = deepcopy_list(U)
-                U_copy[j].bend += dbend
-                U_copy[j].update()
-                collisionEventsHandler.run(U_copy, M)
-                s = cost(frame_array, U_copy)
-                if s < w:
-                    w = s
-                    U = U_copy
-                    Si = (s, U, index, index2)
-                    improved = True
 
     return Si
 
@@ -407,27 +390,24 @@ def init_space(t, initial):
     Config.MAX_Y_RESOLUTION = int(get_next_nonempty_line(initial))
     Config.MAX_ROTATION = float(get_next_nonempty_line(initial))
     Config.MAX_ROTATION_RESOLUTION = int(get_next_nonempty_line(initial))
-    Config.MAX_BEND = float(get_next_nonempty_line(initial))
-    Config.MAX_BEND_RESOLUTION = float(get_next_nonempty_line(initial))
-    Config.MIN_LENGTH_INCREASE = float(get_next_nonempty_line(initial))
-    Config.MAX_LENGTH_INCREASE = float(get_next_nonempty_line(initial))
+    Config.MIN_LENGTH_INCREASE = int(get_next_nonempty_line(initial))
+    Config.MAX_LENGTH_INCREASE = int(get_next_nonempty_line(initial))
     Config.LENGTH_INCREASE_RESOLUTION = float(get_next_nonempty_line(initial))
     Config.MAX_LENGTH_BEFORE_SPLIT = int(get_next_nonempty_line(initial))
     Config.MIN_LENGTH = int(get_next_nonempty_line(initial))
-    #Config.SPLIT_RATIO_BEGINNING = float(get_next_nonempty_line(initial))
-    #Config.SPLIT_RATIO_END = float(get_next_nonempty_line(initial))
-    #Config.SPLIT_RATIO_RESOLUTION = int(get_next_nonempty_line(initial))
+    Config.SPLIT_RATIO_BEGINNING = float(get_next_nonempty_line(initial))
+    Config.SPLIT_RATIO_END = float(get_next_nonempty_line(initial))
+    Config.SPLIT_RATIO_RESOLUTION = int(get_next_nonempty_line(initial))
 
     # define attribute names and types
     schema = {"name": str,
               "pos:x": float,
               "pos:y": float,
               "length": float,
-              "rotation": float,
-              "bend": float}
+              "rotation": float}
 
     # list required header columns
-    requirements = ["pos:x", "pos:y", "length", "rotation", "bend"]
+    requirements = ["pos:x", "pos:y", "length", "rotation"]
 
     # find header
     for line in initial:
@@ -501,28 +481,13 @@ def init_space(t, initial):
         bacterium.pos = np.array([row["pos:x"], row["pos:y"], 0])
         bacterium.theta = row["rotation"]
         bacterium.length = row["length"]
-        bacterium.bend = row["bend"]
         bacterium.update()
 
         # add to the universe
         universe.append(bacterium)
-        
-    return [universe]
-'''
-#test starts here
-    i = 1
-    for bacterium in universe:
-        print("bacterium %d" %i)
-        print("line 1 m: " + str(bacterium.line_1.m))
-        print("line 2 m: " + str(bacterium.line_2.m))
-        print("line 3 m: " + str(bacterium.line_3.m))
-        print("line 4 m: " + str(bacterium.line_4.m))
-        print("\n\n")
-        i+=1
-    sys.exit()
 
-#test ends here
-'''
+    return [universe]
+
 
 # Advance bacterium, including moving and spinning
 def advance(bacterium):
@@ -597,24 +562,14 @@ def generate_image_cv2(U, im=None):
                    bacterium.radius, 1, -1)
         cv2.circle(im, tuple(bacterium.tail_pos[:2].astype(int)),
                    bacterium.radius, 1, -1)
-        cv2.circle(im, tuple(bacterium.pos[:2].astype(int)),
-                   bacterium.radius, 1, -1)
 
         # body
         points = [tuple(bacterium.end_point_1[:2]),
                   tuple(bacterium.end_point_2[:2]),
-                  tuple(bacterium.end_point_6[:2]),
-                  tuple(bacterium.end_point_5[:2])]
+                  tuple(bacterium.end_point_3[:2]),
+                  tuple(bacterium.end_point_4[:2])]
         points = np.array([(int(point[0]), int(point[1])) for point in points])
         cv2.fillConvexPoly(im, points, 1, 1)
-        
-        points = [tuple(bacterium.end_point_3[:2]),
-                  tuple(bacterium.end_point_4[:2]),
-                  tuple(bacterium.end_point_8[:2]),
-                  tuple(bacterium.end_point_7[:2])]
-        points = np.array([(int(point[0]), int(point[1])) for point in points])
-        cv2.fillConvexPoly(im, points, 1, 1)
-
 
     return im
 
@@ -628,53 +583,23 @@ def generate_image_edge(U, im=None):
         p2 = (int(bacterium.end_point_2[0]), int(bacterium.end_point_2[1]))
         p3 = (int(bacterium.end_point_3[0]), int(bacterium.end_point_3[1]))
         p4 = (int(bacterium.end_point_4[0]), int(bacterium.end_point_4[1]))
-        p5 = (int(bacterium.end_point_5[0]), int(bacterium.end_point_5[1]))
-        p6 = (int(bacterium.end_point_6[0]), int(bacterium.end_point_6[1]))
-        p7 = (int(bacterium.end_point_7[0]), int(bacterium.end_point_7[1]))
-        p8 = (int(bacterium.end_point_8[0]), int(bacterium.end_point_8[1]))
-        
+
         # body lines
-        m1 = int((p5[1]-p1[1])/(p5[0]-p1[0]))
-        m2 = int((p7[1]-p3[1])/(p7[0]-p3[0]))
-        poe1_x = int((m2*p3[0] + m1*p1[0]+p3[1]-p1[1])/(m1-m2))
-        poe1_y = int(m1*(poe1_x - p1[0]) + p1[1])
+        cv2.line(im, p1, p4, 1)
+        cv2.line(im, p2, p3, 1)
 
-        m1 = int((p6[1]-p2[1])/(p6[0]-p2[0]))
-        m2 = int((p8[1]-p4[1])/(p8[0]-p4[0]))
-        poe2_x = int((m2*p4[0] + m1*p2[0]+p4[1]-p2[1])/(m1-m2))
-        poe2_y = int(m1*(poe2_x - p2[0]) + p2[1])
-
-        if (poe1_x < p5[0] and poe1_x < p1[0]) or (poe1_x > p5[0] and poe1_x > p1[0]):
-            poe2 = (int(poe2_x), int(poe2_y))
-            cv2.line(im, p2, poe2, (255, 0, 0))
-            cv2.line(im, poe2, p4, (255, 0, 0))
-            cv2.line(im, p1, p5, (255, 0, 0))
-            cv2.line(im, p3, p7, (255, 0, 0))
-            m1 = int((p5[1]-bacterium.pos[1])/(p5[0]-bacterium.pos[0]))
-            m2 = int((p7[1] - bacterium.pos[1])/(p7[0] - bacterium.pos[0]))
-            cv2.ellipse(im, (int(bacterium.pos[0]), int(bacterium.pos(1))), (bacterium.radius, bacterium.radius), 0, atan(m2)*180/3.14, atan(m1)*180/3.14, 255)
-        else:
-            poe1 = (int(poe1_x), int(poe1_y))
-            cv2.line(im, p1, poe1, (255, 0, 0))
-            cv2.line(im, poe1, p3, (255, 0, 0))
-            cv2.line(im, p2, p6, (255, 0, 0))
-            cv2.line(im, p4, p8, (255, 0, 0))
-            m1 = int((p6[1]-bacterium.pos[1])/(p6[0]-bacterium.pos[0]))
-            m2 = int((p8[1] - bacterium.pos[1])/(p8[0] - bacterium.pos[0]))
-            cv2.ellipse(im, (int(bacterium.pos[0]), int(bacterium.pos(1))), (bacterium.radius, bacterium.radius), 0, (3.14+atan(m1))*180/3.14, (3.14+atan(m2))*180/3.14, 255)
         # head
         center = (int(bacterium.head_pos[0]), int(bacterium.head_pos[1]))
         axes = (bacterium.radius, bacterium.radius)
         cv2.ellipse(im, (center[0], center[1]), axes,
-                    (pi/2+bacterium.bend/2-bacterium.theta)*180/3.14, 90, 270, 255)
+                    bacterium.theta*180/3.14, 90, 270, 1)
 
         # tail
         center = (int(bacterium.tail_pos[0]), int(bacterium.tail_pos[1]))
         axes = (bacterium.radius, bacterium.radius)
         cv2.ellipse(im, (center[0], center[1]), axes,
-                    (3*pi/2 - bacterium.bend/2 - bacterium.theta)*180/3.14, -90, 90, 255)
-        
-        
+                    bacterium.theta*180/3.14, -90, 90, 1)
+
     return im
 
 
@@ -686,78 +611,25 @@ def generate_image_edge_cv2(U, im):
         p2 = (int(bacterium.end_point_2[0]), int(bacterium.end_point_2[1]))
         p3 = (int(bacterium.end_point_3[0]), int(bacterium.end_point_3[1]))
         p4 = (int(bacterium.end_point_4[0]), int(bacterium.end_point_4[1]))
-        p5 = (int(bacterium.end_point_5[0]), int(bacterium.end_point_5[1]))
-        p6 = (int(bacterium.end_point_6[0]), int(bacterium.end_point_6[1]))
-        p7 = (int(bacterium.end_point_7[0]), int(bacterium.end_point_7[1]))
-        p8 = (int(bacterium.end_point_8[0]), int(bacterium.end_point_8[1]))
 
-        cv2.line(im, p1, p5, (255,0,0))
-        cv2.line(im, p2, p6, (255,0,0))
-        cv2.line(im, p3, p7, (255,0,0))
-        cv2.line(im, p4, p8, (255,0,0))
-        
-        
-        '''
         # body lines
-        m1 = int((p5[1]-p1[1])/(p5[0]-p1[0]))
-        m2 = int((p7[1]-p3[1])/(p7[0]-p3[0]))
-        poe1_x = int((m2*p3[0] + m1*p1[0]+p3[1]-p1[1])/(m1-m2))
-        poe1_y = int(m1*(poe1_x - p1[0]) + p1[1])
+        cv2.line(im, p1, p4, (255, 0, 0))
+        cv2.line(im, p2, p3, (255, 0, 0))
 
-        m1 = int((p6[1]-p2[1])/(p6[0]-p2[0]))
-        m2 = int((p8[1]-p4[1])/(p8[0]-p4[0]))
-        poe2_x = int((m2*p4[0] + m1*p2[0]+p4[1]-p2[1])/(m1-m2))
-        poe2_y = int(m1*(poe2_x - p2[0]) + p2[1])
-
-        if (poe1_x < p5[0] and poe1_x < p1[0]) or (poe1_x > p5[0] and poe1_x > p1[0]):
-            poe2 = (int(poe2_x), int(poe2_y))
-            cv2.line(im, p2, poe2, (255, 0, 0))
-            cv2.line(im, poe2, p4, (255, 0, 0))
-            cv2.line(im, p1, p5, (255, 0, 0))
-            cv2.line(im, p3, p7, (255, 0, 0))
-            m1 = int((p5[1]-bacterium.pos[1])/(p5[0]-bacterium.pos[0]))
-            m2 = int((p7[1] - bacterium.pos[1])/(p7[0] - bacterium.pos[0]))
-            cv2.ellipse(im, (int(bacterium.pos[0]), int(bacterium.pos(1))), (bacterium.radius, bacterium.radius), 0, atan(m2)*180/3.14, atan(m1)*180/3.14, 255)
-        else:
-            poe1 = (int(poe1_x), int(poe1_y))
-            cv2.line(im, p1, poe1, (255, 0, 0))
-            cv2.line(im, poe1, p3, (255, 0, 0))
-            cv2.line(im, p2, p6, (255, 0, 0))
-            cv2.line(im, p4, p8, (255, 0, 0))
-            m1 = int((p6[1]-bacterium.pos[1])/(p6[0]-bacterium.pos[0]))
-            m2 = int((p8[1] - bacterium.pos[1])/(p8[0] - bacterium.pos[0]))
-            cv2.ellipse(im, (int(bacterium.pos[0]), int(bacterium.pos(1))), (bacterium.radius, bacterium.radius), 0, (3.14+atan(m1))*180/3.14, (3.14+atan(m2))*180/3.14, 255)
-        '''
-        center = (int(bacterium.pos[0]), int(bacterium.pos[1]))
+        # head
+        center = (int(bacterium.head_pos[0]), int(bacterium.head_pos[1]))
         axes = (bacterium.radius, bacterium.radius)
-        cv2.ellipse(im, (center[0], center[1]), axes,0, 0, 360, 255)
-        if(bacterium.bend<=pi):
-            # head
-            center = (int(bacterium.head_pos[0]), int(bacterium.head_pos[1]))
-            axes = (bacterium.radius, bacterium.radius)
-            cv2.ellipse(im, (center[0], center[1]), axes,
-                        (pi/2+bacterium.bend/2-bacterium.theta)*180/3.14, 90, 270, 255)
+        cv2.ellipse(im, (center[0], center[1]), axes,
+                    bacterium.theta*180/3.14, 90, 270, 255)
 
-            # tail
-            center = (int(bacterium.tail_pos[0]), int(bacterium.tail_pos[1]))
-            axes = (bacterium.radius, bacterium.radius)
-            cv2.ellipse(im, (center[0], center[1]), axes,
-                        (3*pi/2 - bacterium.bend/2 - bacterium.theta)*180/3.14, -90, 90, 255)
-        else:
-            bend = 2*pi - bacterium.bend
-            # head
-            center = (int(bacterium.head_pos[0]), int(bacterium.head_pos[1]))
-            axes = (bacterium.radius, bacterium.radius)
-            cv2.ellipse(im, (center[0], center[1]), axes,
-                        (pi - (pi/2+bend/2-bacterium.theta))*180/3.14, 90, 270, 255)
+        # tail
+        center = (int(bacterium.tail_pos[0]), int(bacterium.tail_pos[1]))
+        axes = (bacterium.radius, bacterium.radius)
+        cv2.ellipse(im, (center[0], center[1]), axes,
+                    bacterium.theta*180/3.14, -90, 90, 255)
 
-            # tail
-            center = (int(bacterium.tail_pos[0]), int(bacterium.tail_pos[1]))
-            axes = (bacterium.radius, bacterium.radius)
-            cv2.ellipse(im, (center[0], center[1]), axes,
-                        (pi - (3*pi/2 - bend/2 - bacterium.theta))*180/3.14, -90, 90, 255)
-        
     return im
+
 
 # Normalize a list of weights
 def normalize(W):
@@ -841,7 +713,6 @@ def deepcopy(bacterium):
     new_bacterium.theta = bacterium.theta
     new_bacterium.length = bacterium.length
     new_bacterium.name = bacterium.name
-    new_bacterium.bend = bacterium.bend
     new_bacterium.update()
     return new_bacterium
 
@@ -867,7 +738,6 @@ def read_state(f):
         bacterium.pos[1] = float(line[2])
         bacterium.length = float(line[3])
         bacterium.theta = float(line[4])
-        bacterium.bend = float(line[5])
 
         bacterium.update()
         U.append(bacterium)
@@ -880,27 +750,25 @@ def write_state(path, index, U):
     with open(path, "w") as file:
         file.write("{index} {count}\n".format(index=index, count=len(U)))
         for bacterium in sorted(U, key=lambda x: x.pos[0]):
-            file.write("{name} {x} {y} {length} {theta} {bend}\n"
+            file.write("{name} {x} {y} {length} {theta}\n"
                        .format(name=bacterium.name,
                                x=bacterium.pos[0],
                                y=bacterium.pos[1],
                                length=bacterium.length,
-                               theta=bacterium.theta,
-                               bend=bacterium.bend))
+                               theta=bacterium.theta))
 
 
 def write_state2(path, U):
     with open(path, "w") as file:
         file.write("{count}\n".format(count=len(U)))
         for bacterium in sorted(U, key=lambda x: x.pos[0]):
-            file.write("{name} {index} {x} {y} {length} {theta} {bend}\n"
+            file.write("{name} {index} {x} {y} {length} {theta}\n"
                        .format(name=bacterium.name,
                                index=bacterium.index,
                                x=bacterium.pos[0],
                                y=bacterium.pos[1],
                                length=bacterium.length,
-                               theta=bacterium.theta,
-                               bend=bacterium.bend))
+                               theta=bacterium.theta))
 
 
 # cost function
@@ -938,59 +806,3 @@ def split(bacterium, split_ratio):
     new_bacterium.update()
 
     return new_bacterium
-
-def split(bacterium):
-    if bacterium.bend <= pi:
-        #positioning the first one
-        L_0 = bacterium.length
-        bend = bacterium.bend
-        theta = bacterium.theta
-        bacterium.length = L_0/2 - 2
-        x_0 = bacterium.pos[0]
-        y_0 = bacterium.pos[1]
-        x = bacterium.pos[0] - ((L_0 - bacterium.length) * cos((pi/2+bacterium.bend/2-bacterium.theta)))
-        y = bacterium.pos[1] - ((L_0 - bacterium.length) * sin((pi/2+bacterium.bend/2-bacterium.theta)))
-        bacterium.pos = np.array([x,y,0])
-        bacterium.theta = pi/2+bacterium.bend/2-bacterium.theta
-        bacterium.bend = pi
-        bacterium.name += '0'
-        bacterium.update()
-
-        #positioning the second one
-        new_bacterium = Bacterium()
-        x = x_0 + bacterium.length*cos(3*pi/2 - bend/2 - theta)/2
-        y = y_0 + bacterium.length*sin(3*pi/2 - bend/2 - theta)/2
-        new_bacterium.pos = np.array([x, y, 0])
-        new_bacterium.theta = 3*pi/2 - bend/2 - theta
-        new_bacterium.bend = pi
-        new_bacterium.length = L_0 - bacterium.length - 2
-        new_bacterium.name = bacterium.name[:-1] + '1'
-        new_bacterium.update()
-        return new_bacterium
-    else:
-        #positioning the first one
-        L_0 = bacterium.length
-        bend = 2*pi - bacterium.bend
-        theta = bacterium.theta
-        bacterium.length = L_0/2 - 2
-        x_0 = bacterium.pos[0]
-        y_0 = bacterium.pos[1]
-        x = bacterium.pos[0] - ((L_0 - bacterium.length) * cos((pi - (pi/2+bend/2-bacterium.theta))))
-        y = bacterium.pos[1] - ((L_0 - bacterium.length) * sin((pi - (pi/2+bend/2-bacterium.theta))))
-        bacterium.pos = np.array([x,y,0])
-        bacterium.theta = pi - (pi/2+bend/2-bacterium.theta)
-        bacterium.bend = pi
-        bacterium.name += '0'
-        bacterium.update()
-
-        #positioning the second one
-        new_bacterium = Bacterium()
-        x = x_0 + bacterium.length*cos(pi - (3*pi/2 - bend/2 - theta))/2
-        y = y_0 + bacterium.length*sin(pi - (3*pi/2 - bend/2 - theta))/2
-        new_bacterium.pos = np.array([x, y, 0])
-        new_bacterium.theta = pi - (3*pi/2 - bend/2 - theta)
-        new_bacterium.bend = pi
-        new_bacterium.length = L_0 - bacterium.length - 2
-        new_bacterium.name = bacterium.name[:-1] + '1'
-        new_bacterium.update()
-        return new_bacterium

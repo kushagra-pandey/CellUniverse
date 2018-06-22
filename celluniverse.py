@@ -21,7 +21,7 @@ from scipy import misc
 from constants import Config, Globals
 from findconsistentpaths import create_consistent
 from helperMethods import (collision_matrix, deepcopy_list, find_k_best_moves,
-                           generate_image_edge_cv2, generate_image_cv2, generate_universes,
+                           generate_image_edge_cv2, generate_universes,
                            get_frames, improve, init_space, process_init,
                            write_state)
 from mphelper import InterruptablePool, kwargs
@@ -157,7 +157,7 @@ def main():
 
         # Pulling stage
         S.sort(key=lambda x: x[0])
-        '''
+
         # improve the top 3K universes
         k3 = min(3*Config.K, len(S))
         args = []
@@ -169,7 +169,7 @@ def main():
                 count=k3,
                 start=start))
         S = pool.map(improve, args)
-        '''
+
         # pick the K best universes
         S.sort(key=lambda x: x[0])
         S = S[:Config.K]
@@ -191,7 +191,6 @@ def main():
             #                                              runtime)
             image_filename = "{}.png".format(t)
             image_path = os.path.join(image_dirs[i], image_filename)
-            #generate_image_edge_cv2(U, new_frame)
             generate_image_edge_cv2(U, new_frame)
             misc.imsave(image_path, new_frame)
 
